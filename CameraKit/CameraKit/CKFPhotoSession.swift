@@ -110,11 +110,7 @@ extension CKFSession.FlashMode {
         settings.flashMode = self.flashMode.captureFlashMode
 
         if let connection = self.photoOutput.connection(with: .video) {
-            if self.resolution.width > 0, self.resolution.height > 0 {
-                connection.videoOrientation = .portrait
-            } else {
-                connection.videoOrientation = UIDevice.current.orientation.videoOrientation
-            }
+            connection.videoOrientation = UIDevice.current.orientation.videoOrientation
         }
         
         self.photoOutput.capturePhoto(with: settings, delegate: self)
@@ -144,7 +140,7 @@ extension CKFSession.FlashMode {
         }
     }
     
-    @objc public var resolution = CGSize.zero {
+    @objc public var preset = AVCaptureSession.Preset.high {
         didSet {
             guard let deviceInput = self.captureDeviceInput else {
                 return
@@ -152,16 +148,7 @@ extension CKFSession.FlashMode {
             
             do {
                 try deviceInput.device.lockForConfiguration()
-                
-                if
-                    self.resolution.width > 0, self.resolution.height > 0,
-                    let format = CKFSession.deviceInputFormat(input: deviceInput, width: Int(self.resolution.width), height: Int(self.resolution.height))
-                {
-                    deviceInput.device.activeFormat = format
-                } else {
-                    self.session.sessionPreset = .high
-                }
-                
+                self.session.sessionPreset = preset
                 deviceInput.device.unlockForConfiguration()
             } catch {
                 //
@@ -227,14 +214,6 @@ extension CKFSession.FlashMode {
     private func processPhotoData(data: Data, resolvedSettings: AVCaptureResolvedPhotoSettings) {
         guard let image = UIImage(data: data) else {
             self.errorCallback(CKFError.error("Cannot get photo"))
-            return
-        }
-
-        if
-            self.resolution.width > 0, self.resolution.height > 0,
-            let transformedImage = CKUtils.cropAndScale(image, width: Int(self.resolution.width), height: Int(self.resolution.height), orientation: UIDevice.current.orientation, mirrored: self.cameraPosition == .front)
-        {
-            self.captureCallback(transformedImage, resolvedSettings)
             return
         }
 
